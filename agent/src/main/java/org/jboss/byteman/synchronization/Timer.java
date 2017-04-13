@@ -32,20 +32,20 @@ public class Timer {
     public Timer() {
         reset();
     }
-    
+
     public synchronized long getStartTime() {
     	return start;
     }
 
     public synchronized long getElapsedTime() {
-        return System.currentTimeMillis() - start;
+        return System.nanoTime() - start;
     }
 
     public synchronized long reset() {
         try {
             return getElapsedTime();
         } finally {
-            start = System.currentTimeMillis();
+            start = System.nanoTime();
         }
     }
 }

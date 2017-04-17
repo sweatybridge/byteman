@@ -31,6 +31,7 @@ import org.jboss.byteman.agent.Transformer;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * This is the default helper class which is used to define builtin operations for rules.
@@ -66,6 +67,12 @@ public class Helper
             dotraceln("dbg", "rule.debug{" + rule.getKey() + "} : " + text);
         }
         return true;
+    }
+
+    public String generateTraceId() {
+        final byte[] bytes = new byte[8];
+        ThreadLocalRandom.current().nextBytes(bytes);
+        return Base64.getEncoder().encodeToString(bytes);
     }
 
     // file + System.out/err based trace support

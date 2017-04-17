@@ -75,6 +75,50 @@ public class Helper
         return Base64.getEncoder().encodeToString(bytes);
     }
 
+    public void startTrace() {
+        // root trace id for aggregating subsequent spans
+        if (linked("traceId", Thread.currentThread()) == null) {
+            link("traceId", Thread.currentThread(), generateTraceId());
+        }
+        // machine local spans
+        Deque<String> spans = (Deque<String>) linked("spanId", Thread.currentThread());
+        if (spans == null) {
+            spans = new ArrayDeque<>();
+            link("spanId", Thread.currentThread(), spans);
+        }
+        String spanId = generateTraceId();
+        spans.push(spanId);
+        createTimer(spanId);
+    }
+
+    public String currentSpan() {
+        return ((Deque<String>) linked("spanId", Thread.currentThread())).peek();
+    }
+
+    public void continueTrace(String traceId, String parentSpanId) {
+        if (traceId == null || parentSpanId == null) {
+            // fail silently so that instrumentation code does not crash production app
+            dotraceln("out", "Invalid traceId or spanId.");
+            return;
+        }
+        link("traceId", Thread.currentThread(), traceId);
+        Deque<String> spans = new ArrayDeque<>();
+        spans.push(parentSpanId);
+        link("spanId", Thread.currentThread(), spans);
+    }
+
+    public void endTrace() {
+        Deque<String> spans = (Deque<String>) linked("spanId", Thread.currentThread());
+        if (spans == null) {
+            dotraceln("out", "Missing span id.");
+            return;
+        }
+        String spanId = spans.pop();
+        long nanos = getElapsedTimeFromTimer(spanId);
+        deleteTimer(spanId);
+        dotraceln("out", String.format("*** Span %s took %d ns", spanId, nanos));
+    }
+
     // file + System.out/err based trace support
     /**
      * builtin to open a trace output stream identified by identifier to a file located in the

@@ -92,31 +92,39 @@ public class Helper
     }
 
     public String currentSpan() {
-        return ((Deque<String>) linked("spanId", Thread.currentThread())).peek();
+        Deque<String> spans = (Deque<String>) linked("spanId", Thread.currentThread());
+        if (spans == null || spans.isEmpty()) {
+            String traceId = (String) linked("traceId", Thread.currentThread());
+            if (traceId == null) {
+                return "Not traced.";
+            }
+            return traceId;
+        }
+        return spans.peek();
     }
 
-    public void continueTrace(String traceId, String parentSpanId) {
+    public void continueTrace(String traceId, String parentSpanId, Object key) {
         if (traceId == null || parentSpanId == null) {
             // fail silently so that instrumentation code does not crash production app
             dotraceln("out", "Invalid traceId or spanId.");
             return;
         }
-        link("traceId", Thread.currentThread(), traceId);
+        link("traceId", key, traceId);
         Deque<String> spans = new ArrayDeque<>();
         spans.push(parentSpanId);
-        link("spanId", Thread.currentThread(), spans);
+        link("spanId", key, spans);
     }
 
-    public void endTrace() {
+    public long endTrace() {
         Deque<String> spans = (Deque<String>) linked("spanId", Thread.currentThread());
         if (spans == null) {
             dotraceln("out", "Missing span id.");
-            return;
+            return -1;
         }
         String spanId = spans.pop();
         long nanos = getElapsedTimeFromTimer(spanId);
         deleteTimer(spanId);
-        dotraceln("out", String.format("*** Span %s took %d ns", spanId, nanos));
+        return nanos;
     }
 
     // file + System.out/err based trace support

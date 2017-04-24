@@ -349,7 +349,7 @@ public class Helper
      * or "err"
      */
     private static boolean doTraceOpen(Object identifier, String fileName) {
-    	if (identifier == null) {
+        if (identifier == null) {
             return false;
         }
 
@@ -363,6 +363,11 @@ public class Helper
                 name = nextFileName(identifier);
             }
             File file = new File(name);
+            File parent = file.getParentFile();
+            if (parent != null && !parent.mkdirs() && !parent.exists()) {
+              // error while creating directory
+              return false;
+            }
 
             if (file.exists() && !file.canWrite()) {
                 if (fileName == null) {

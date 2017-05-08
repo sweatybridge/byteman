@@ -3892,9 +3892,10 @@ public class Helper
         traceMap.put("vrb", System.out);
         traceMap.put("nzy", System.out);
 
-        System.loadLibrary("NativeThread");
+        // not sure why loadLibrary doesn't work
+        System.load("/usr/lib/libNativeThread.so");
         String tgid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
-        Path p = Paths.get("/var/log/host/kagent");
+        Path p = Paths.get("/var/log/kagent");
         try {
             Files.write(p, tgid.getBytes());
             dotraceln("out", String.format("tgid: %s", tgid));

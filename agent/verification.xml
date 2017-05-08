@@ -6,6 +6,7 @@
       this catches cases where the VM fails to start because
       of an error with the agent configuration
   -->
+<!--
   <files>
     <file>
       <location>target/failsafe-reports/org.jboss.byteman.tests.bugfixes.TestEmptySignature.txt</location>
@@ -176,4 +177,5 @@
       <exists/>
     </file>
   </files>
+-->
 </verifications>

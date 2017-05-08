@@ -40,9 +40,9 @@
                     <javahOS>linux</javahOS>
 
                     <compilerProvider>generic-classic</compilerProvider>
-                    <compilerExecutable>cc</compilerExecutable>
+                    <compilerExecutable>gcc</compilerExecutable>
 
-                    <linkerExecutable>cc</linkerExecutable>
+                    <linkerExecutable>gcc</linkerExecutable>
                     <sources>
                         <source>
                             <directory>../src/main/native</directory>

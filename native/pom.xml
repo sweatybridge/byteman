@@ -5,13 +5,13 @@
     <parent>
         <artifactId>byteman-root</artifactId>
         <groupId>org.jboss.byteman</groupId>
-        <version>3.0.9-SNAPSHOT</version>
+        <version>3.0.10</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>native</artifactId>
-    <version>3.0.9-SNAPSHOT</version>
+    <version>3.0.10</version>
     <packaging>pom</packaging>
 
     <profiles>

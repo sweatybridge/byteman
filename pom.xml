@@ -391,8 +391,9 @@
     <modules>
         <module>submit</module>
         <module>agent</module>
+        <module>native</module>
         <module>install</module>
-        <module>contrib/bmunit</module>
+        <!--<module>contrib/bmunit</module>-->
         <module>contrib/dtest</module>
         <module>contrib/rulecheck-maven-plugin</module>
         <module>contrib/jboss-modules-system</module>

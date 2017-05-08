@@ -30,6 +30,10 @@ import org.jboss.byteman.synchronization.Timer;
 import org.jboss.byteman.agent.Transformer;
 
 import java.io.*;
+import java.lang.management.ManagementFactory;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -68,6 +72,8 @@ public class Helper
         }
         return true;
     }
+
+    public static native int currentNativeId();
 
     public String generateTraceId() {
         final byte[] bytes = new byte[8];
@@ -177,7 +183,7 @@ public class Helper
     {
         return dotrace("out", message);
     }
-    
+
     /**
      * punts to static call Helper.dotrace(identifier, message).
      * @param identifier an identifier used subsequently to identify the trace output stream
@@ -324,10 +330,10 @@ public class Helper
             doTraceException("vrb", th);
         }
     }
-    
+
     /**
      * Print the stack trace to System.out when the noisy log level is enabled
-     * @param th the throwable stack trace 
+     * @param th the throwable stack trace
      */
     public static void noisyTraceException(Throwable th)
     {
@@ -3885,5 +3891,16 @@ public class Helper
         traceMap.put("dbg", System.out);
         traceMap.put("vrb", System.out);
         traceMap.put("nzy", System.out);
+
+        System.loadLibrary("NativeThread");
+        String tgid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
+        Path p = Paths.get("/var/log/host/kagent");
+        try {
+            Files.write(p, tgid.getBytes());
+            dotraceln("out", String.format("tgid: %s", tgid));
+            dotraceln("out", String.format("nid: %d", currentNativeId()));
+        } catch (IOException e) {
+            dotraceln("out", "Failed to write tgid.");
+        }
     }
 }

@@ -1,0 +1,88 @@
+<project>
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.jboss.byteman</groupId>
+        <artifactId>native</artifactId>
+        <version>3.0.9-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>NativeThread</artifactId>
+    <version>3.0.9-SNAPSHOT</version>
+    <packaging>so</packaging>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jboss.byteman</groupId>
+            <artifactId>byteman</artifactId>
+            <version>3.0.9-SNAPSHOT</version>
+            <type>jar</type>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <!--  trigger javah -->
+                    <javahOS>linux</javahOS>
+
+                    <compilerProvider>generic-classic</compilerProvider>
+                    <compilerExecutable>cc</compilerExecutable>
+
+                    <linkerExecutable>cc</linkerExecutable>
+                    <sources>
+                        <source>
+                            <directory>../src/main/native</directory>
+                            <fileNames>
+                                <fileName>NativeThread.c</fileName>
+                            </fileNames>
+                        </source>
+                    </sources>
+
+                    <compilerStartOptions>
+                        <compilerStartOption>-fPIC</compilerStartOption>
+                    </compilerStartOptions>
+
+                    <linkerStartOptions>
+                        <linkerStartOption>-shared</linkerStartOption>
+                    </linkerStartOptions>
+
+                </configuration>
+
+                <executions>
+                    <execution>
+                        <id>javah</id>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <javahOS>linux</javahOS>
+                            <javahProvider>default</javahProvider>
+                            <javahOutputDirectory>${project.build.directory}/custom-javah</javahOutputDirectory>
+                            <workingDirectory>${basedir}</workingDirectory>
+                            <javahOutputFileName>NativeThread.h</javahOutputFileName>
+                            <javahClassNames>
+                                <javahClassName>org.jboss.byteman.rule.helper.Helper</javahClassName>
+                            </javahClassNames>
+                        </configuration>
+                        <goals>
+                            <goal>javah</goal>
+                        </goals>
+                    </execution>
+                </executions>
+
+            </plugin>
+        </plugins>
+    </build>
+</project>

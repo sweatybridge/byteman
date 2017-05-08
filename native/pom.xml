@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>byteman-root</artifactId>
+        <groupId>org.jboss.byteman</groupId>
+        <version>3.0.9-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>native</artifactId>
+    <version>3.0.9-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <profiles>
+
+        <profile>
+            <id>linux</id>
+            <activation>
+                <property>
+                    <name>platform</name>
+                    <value>linux</value>
+                </property>
+            </activation>
+            <modules>
+                <module>linux</module>
+            </modules>
+        </profile>
+
+    </profiles>
+
+</project>

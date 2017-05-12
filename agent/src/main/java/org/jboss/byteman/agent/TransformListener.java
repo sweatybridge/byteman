@@ -139,7 +139,7 @@ public class TransformListener extends Thread
             if (theServerSocket.isClosed()) {
                 return;
             }
-            Socket socket = null;
+            Socket socket;
             try {
                 socket = theServerSocket.accept();
             } catch (IOException e) {
@@ -155,105 +155,68 @@ public class TransformListener extends Thread
             try {
                 handleConnection(socket);
             } catch (Exception e) {
-                Helper.err("TransformListener() : error handling connection on port " + socket.getLocalPort());
+                Helper.err("TransformListener() : error handling connection " + e);
+                Helper.errTraceException(e);
+            } finally {
                 try {
                     socket.close();
-                } catch (IOException e1) {
-                    // do nothing
+                } catch (IOException e) {
+                    Helper.err("TransformListener() : error closing socket on port " + socket.getLocalPort());
                 }
             }
         }
     }
 
-    private void handleConnection(Socket socket)
+    private void handleConnection(Socket socket) throws Exception
     {
-        InputStream is = null;
-        try {
-            is = socket.getInputStream();
-        } catch (IOException e) {
-            // oops. cannot handle this
-            Helper.err("TransformListener.run : error opening socket input stream " + e);
-            Helper.errTraceException(e);
-
-            try {
-                socket.close();
-            } catch (IOException e1) {
-                Helper.err("TransformListener.run : exception closing socket after failed input stream open" + e1);
-                Helper.errTraceException(e1);
-            }
-            return;
-        }
-
-        OutputStream os = null;
-        try {
-            os = socket.getOutputStream();
-        } catch (IOException e) {
-            // oops. cannot handle this
-            Helper.err("TransformListener.run : error opening socket output stream " + e);
-            Helper.errTraceException(e);
-
-            try {
-                socket.close();
-            } catch (IOException e1) {
-                Helper.err("TransformListener.run : exception closing socket after failed output stream open" + e1);
-                Helper.errTraceException(e1);
-            }
-            return;
-        }
+        InputStream is = socket.getInputStream();
+        OutputStream os = socket.getOutputStream();
 
         BufferedReader in = new BufferedReader(new InputStreamReader(is));
         PrintWriter out = new PrintWriter(new OutputStreamWriter(os));
 
-        String line = null;
-        try {
-            line = in.readLine();
-        } catch (IOException e) {
-            Helper.err("TransformListener.run : exception " + e + " while reading command");
-            Helper.errTraceException(e);
-        }
+        String line = in.readLine();
 
-        try {
-            if (line == null) {
-                out.println("ERROR");
-                out.println("Expecting input command");
-                out.println("OK");
-            } else if (line.equals("BOOT")) {
+        // consider using polymorphism
+        switch (line) {
+            case "BOOT":
                 loadJars(in, out, true);
-            } else if (line.equals("SYS")) {
+                break;
+            case "SYS":
                 loadJars(in, out, false);
-            } else if (line.equals("LOAD")) {
+                break;
+            case "LOAD":
                 loadScripts(in, out);
-            } else if (line.equals("DELETE")) {
+                break;
+            case "DELETE":
                 deleteScripts(in, out);
-            } else if (line.equals("LIST")) {
+                break;
+            case "LIST":
                 listScripts(in, out);
-            } else if (line.equals("DELETEALL")) {
+                break;
+            case "DELETEALL":
                 purgeScripts(in, out);
-            } else if (line.equals("VERSION")) {
+                break;
+            case "VERSION":
                 getVersion(in, out);
-            } else if (line.equals("LISTBOOT")) {
+                break;
+            case "LISTBOOT":
                 listBootJars(in, out);
-            } else if (line.equals("LISTSYS")) {
+                break;
+            case "LISTSYS":
                 listSystemJars(in, out);
-            } else if (line.equals("LISTSYSPROPS")) {
+                break;
+            case "LISTSYSPROPS":
                 listSystemProperties(in, out);
-            } else if (line.equals("SETSYSPROPS")) {
+                break;
+            case "SETSYSPROPS":
                 setSystemProperties(in, out);
-            } else {
+                break;
+            default:
                 out.println("ERROR");
-                out.println("Unexpected command " + line);
+                out.println("Unexpected input command: " + line);
                 out.println("OK");
                 out.flush();
-            }
-        } catch (Exception e) {
-            Helper.err("TransformListener.run : exception " + e + " processing command " + line);
-            Helper.errTraceException(e);
-            try {
-                socket.close();
-            } catch (IOException e1) {
-                Helper.err("TransformListener.run : exception closing socket " + e1);
-                Helper.errTraceException(e1);
-            }
         }
     }
 

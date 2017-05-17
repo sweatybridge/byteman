@@ -30,10 +30,6 @@ import org.jboss.byteman.synchronization.Timer;
 import org.jboss.byteman.agent.Transformer;
 
 import java.io.*;
-import java.lang.management.ManagementFactory;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -3894,14 +3890,6 @@ public class Helper
 
         // not sure why loadLibrary doesn't work
         System.load("/usr/lib/libNativeThread.so");
-        String tgid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
-        Path p = Paths.get("/var/log/host/kagent");
-        try {
-            Files.write(p, tgid.getBytes());
-            dotraceln("out", String.format("tgid: %s", tgid));
-            dotraceln("out", String.format("nid: %d", currentNativeId()));
-        } catch (IOException e) {
-            dotraceln("out", "Failed to write tgid.");
-        }
+        dotraceln("out", String.format("nid: %d", currentNativeId()));
     }
 }

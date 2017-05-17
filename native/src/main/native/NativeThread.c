@@ -9,7 +9,7 @@ Java_org_jboss_byteman_rule_helper_Helper_currentNativeId(JNIEnv *env, jobject o
     int fd;
     jint tid;
 
-    fd = open("/dev/kagent", O_RDONLY);
+    fd = open("/var/log/host/kagent", O_RDONLY);
     if (fd < 0) {
         return 0;
     }

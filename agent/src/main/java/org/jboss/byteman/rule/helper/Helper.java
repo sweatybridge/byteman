@@ -70,6 +70,7 @@ public class Helper
     }
 
     public static native int currentNativeId();
+    public static native void printTrace(String trace);
 
     public String generateTraceId() {
         final byte[] bytes = new byte[8];

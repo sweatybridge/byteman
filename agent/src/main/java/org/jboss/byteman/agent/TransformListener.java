@@ -179,6 +179,9 @@ public class TransformListener extends Thread
 
         // consider using polymorphism
         switch (line) {
+            case "BENCHMARK":
+                Helper.benchmark();
+                break;
             case "BOOT":
                 loadJars(in, out, true);
                 break;

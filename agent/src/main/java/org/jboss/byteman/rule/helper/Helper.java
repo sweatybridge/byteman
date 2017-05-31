@@ -3893,4 +3893,13 @@ public class Helper
         System.load("/usr/lib/libNativeThread.so");
         dotraceln("out", String.format("nid: %d", currentNativeId()));
     }
+
+    public static void benchmark() {
+        long start = System.nanoTime();
+        int count = 10_000;
+        for (int i = 0; i < count; i++) {
+            printTrace("This is longest trace string you will ever see in the logs. Please do not be longer than this. Cheers.");
+        }
+        dotraceln("out", String.format("latency per call: %d / %d ns", System.nanoTime() - start, count));
+    }
 }

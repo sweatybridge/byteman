@@ -34,6 +34,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
 
 /**
  * This is the default helper class which is used to define builtin operations for rules.
@@ -75,7 +76,7 @@ public class Helper
 
     public static native void printTrace(String trace);
 
-    private final class Span {
+    private static final class Span {
         private final String traceId;
         private final String spanId;
 
@@ -97,7 +98,13 @@ public class Helper
 
     // assume a FIFO task scheduler
     private static final ConcurrentMap<Runnable, Deque<Span>> propagated = new ConcurrentHashMap<>();
-    private static final ThreadLocal<Deque<Span>> spans = ThreadLocal.withInitial(ArrayDeque::new);
+    //private static final ThreadLocal<Deque<Span>> spans = ThreadLocal.withInitial(ArrayDeque::new);
+    private static final ThreadLocal<Deque<Span>> spans = ThreadLocal.withInitial(new Supplier<Deque<Span>>() {
+        @Override
+        public Deque<Span> get() {
+            return new ArrayDeque<>();
+        }
+    });
     private static final String NOT_TRACED = "Not traced.";
 
     private String generateTraceId() {

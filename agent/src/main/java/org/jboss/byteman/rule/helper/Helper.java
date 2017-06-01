@@ -32,6 +32,7 @@ import org.jboss.byteman.synchronization.Timer;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
@@ -97,7 +98,7 @@ public class Helper
     }
 
     // assume a FIFO task scheduler
-    private static final ConcurrentMap<Runnable, Deque<Span>> propagated = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Runnable, ConcurrentLinkedQueue<Span>> propagated = new ConcurrentHashMap<>();
     //private static final ThreadLocal<Deque<Span>> spans = ThreadLocal.withInitial(ArrayDeque::new);
     private static final ThreadLocal<Deque<Span>> spans = ThreadLocal.withInitial(new Supplier<Deque<Span>>() {
         @Override
@@ -105,7 +106,7 @@ public class Helper
             return new ArrayDeque<>();
         }
     });
-    private static final String NOT_TRACED = "Not traced.";
+    private static final String NOT_TRACED = "null";
 
     private String generateTraceId() {
         final byte[] bytes = new byte[8];
@@ -164,9 +165,12 @@ public class Helper
             return;
         }
         // same runnable can be executed multiple times, hence we need a deque
-        Deque<Span> propSpans = propagated.putIfAbsent(key, new ArrayDeque<>());
+        ConcurrentLinkedQueue<Span> propSpans = propagated.putIfAbsent(key, new ConcurrentLinkedQueue<>());
+        if (propSpans == null) {
+            propSpans = propagated.get(key);
+        }
         Span parentSpan = new Span(localSpans.peek().traceId, localSpans.peek().spanId);
-        propSpans.push(parentSpan);
+        propSpans.offer(parentSpan);
     }
 
     public void continueTrace(Runnable key) {
@@ -175,12 +179,13 @@ public class Helper
             dotraceln("out", "continueTrace called with null key.");
             return;
         }
-        Deque<Span> propSpans = propagated.get(key);
+        ConcurrentLinkedQueue<Span> propSpans = propagated.get(key);
         if (propSpans == null || propSpans.isEmpty()) {
             // nothing to continue
             return;
         }
-        Span parentSpan = propSpans.pop();
+        // no need to create this span as it's only a dummy
+        Span parentSpan = propSpans.poll();
 
         Deque<Span> localSpans = spans.get();
         localSpans.push(parentSpan);

@@ -23,14 +23,16 @@
  */
 package org.jboss.byteman.rule.helper;
 
+import org.jboss.byteman.agent.Transformer;
 import org.jboss.byteman.rule.Rule;
 import org.jboss.byteman.rule.exception.ExecuteException;
 import org.jboss.byteman.synchronization.*;
 import org.jboss.byteman.synchronization.Timer;
-import org.jboss.byteman.agent.Transformer;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -70,64 +72,126 @@ public class Helper
     }
 
     public static native int currentNativeId();
+
     public static native void printTrace(String trace);
 
-    public String generateTraceId() {
+    /**
+     * Span is the basic unit of measurement for the execution time of a method.
+     */
+    private final class Span {
+        private final String traceId;
+        private final String spanId;
+
+        private long startTimeNano;
+
+        private Span(String traceId, String spanId) {
+            this.traceId = traceId;
+            this.spanId = spanId;
+        }
+
+        private void start() {
+            startTimeNano = System.nanoTime();
+        }
+
+        private long end() {
+            return System.nanoTime() - startTimeNano;
+        }
+    }
+
+    // assume a FIFO task scheduler
+    private static final ConcurrentMap<Runnable, Deque<Span>> propagated = new ConcurrentHashMap<>();
+    private static final ThreadLocal<Deque<Span>> spans = ThreadLocal.withInitial(ArrayDeque::new);
+    private static final String NOT_TRACED = "Not traced.";
+
+    private String generateTraceId() {
         final byte[] bytes = new byte[8];
         ThreadLocalRandom.current().nextBytes(bytes);
         return Base64.getEncoder().encodeToString(bytes);
     }
 
     public void startTrace() {
-        // root trace id for aggregating subsequent spans
-        if (linked("traceId", Thread.currentThread()) == null) {
-            link("traceId", Thread.currentThread(), generateTraceId());
-        }
-        // machine local spans
-        Deque<String> spans = (Deque<String>) linked("spanId", Thread.currentThread());
-        if (spans == null) {
-            spans = new ArrayDeque<>();
-            link("spanId", Thread.currentThread(), spans);
-        }
+        Deque<Span> localSpans = spans.get();
+        String traceId = localSpans.isEmpty() ? generateTraceId() : localSpans.peek().traceId;
         String spanId = generateTraceId();
-        spans.push(spanId);
-        createTimer(spanId);
-    }
 
-    public String currentSpan() {
-        Deque<String> spans = (Deque<String>) linked("spanId", Thread.currentThread());
-        if (spans == null || spans.isEmpty()) {
-            String traceId = (String) linked("traceId", Thread.currentThread());
-            if (traceId == null) {
-                return "Not traced.";
-            }
-            return traceId;
-        }
-        return spans.peek();
-    }
-
-    public void continueTrace(String traceId, String parentSpanId, Object key) {
-        if (traceId == null || parentSpanId == null) {
-            // fail silently so that instrumentation code does not crash production app
-            dotraceln("out", "Invalid traceId or spanId.");
-            return;
-        }
-        link("traceId", key, traceId);
-        Deque<String> spans = new ArrayDeque<>();
-        spans.push(parentSpanId);
-        link("spanId", key, spans);
+        Span span = new Span(traceId, spanId);
+        localSpans.push(span);
+        span.start();
     }
 
     public long endTrace() {
-        Deque<String> spans = (Deque<String>) linked("spanId", Thread.currentThread());
-        if (spans == null) {
-            dotraceln("out", "Missing span id.");
-            return -1;
+        Deque<Span> localSpans = spans.get();
+        if (localSpans.isEmpty()) {
+            // nothing to end
+            return 0;
         }
-        String spanId = spans.pop();
-        long nanos = getElapsedTimeFromTimer(spanId);
-        deleteTimer(spanId);
-        return nanos;
+        return localSpans.pop().end();
+    }
+
+    public String currentSpan() {
+        Deque<Span> localSpans = spans.get();
+        if (localSpans.isEmpty()) {
+            // fail silently so we don't crash the actual application with our instrumentation code
+            dotraceln("out", "currentSpan called with no spans.");
+            return NOT_TRACED;
+        }
+        return localSpans.peek().spanId;
+    }
+
+    public String currentTrace() {
+        Deque<Span> localSpans = spans.get();
+        if (localSpans.isEmpty()) {
+            // fail silently
+            dotraceln("out", "currentTrace called with no spans.");
+            return NOT_TRACED;
+        }
+        return localSpans.peek().traceId;
+    }
+
+    public void propagateTrace(Runnable key) {
+        if (key == null) {
+            // fail silently
+            dotraceln("out", "propagateTrace called with null key.");
+            return;
+        }
+        Deque<Span> localSpans = spans.get();
+        if (localSpans.isEmpty()) {
+            // nothing to propagate
+            return;
+        }
+        // same runnable can be executed multiple times, hence we need a deque
+        Deque<Span> propSpans = propagated.putIfAbsent(key, new ArrayDeque<>());
+        Span parentSpan = new Span(localSpans.peek().traceId, localSpans.peek().spanId);
+        propSpans.push(parentSpan);
+    }
+
+    public void continueTrace(Runnable key) {
+        if (key == null) {
+            // fail silently
+            dotraceln("out", "continueTrace called with null key.");
+            return;
+        }
+        Deque<Span> propSpans = propagated.get(key);
+        if (propSpans == null || propSpans.isEmpty()) {
+            // nothing to continue
+            return;
+        }
+        Span parentSpan = propSpans.pop();
+
+        Deque<Span> localSpans = spans.get();
+        localSpans.push(parentSpan);
+    }
+
+    public void continueTrace(String traceId, String parentSpanId) {
+        if (traceId == null || parentSpanId == null) {
+            // fail silently
+            dotraceln("out", "continueTrace called with null traceId or spanId.");
+            return;
+        }
+        Span parentSpan = new Span(traceId, parentSpanId);
+
+        Deque<Span> localSpans = spans.get();
+        localSpans.push(parentSpan);
     }
 
     // file + System.out/err based trace support

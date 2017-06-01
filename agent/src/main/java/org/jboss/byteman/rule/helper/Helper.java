@@ -75,9 +75,6 @@ public class Helper
 
     public static native void printTrace(String trace);
 
-    /**
-     * Span is the basic unit of measurement for the execution time of a method.
-     */
     private final class Span {
         private final String traceId;
         private final String spanId;

@@ -136,8 +136,6 @@ public class Helper
     public String currentSpan() {
         Deque<Span> localSpans = spans.get();
         if (localSpans.isEmpty()) {
-            // fail silently so we don't crash the actual application with our instrumentation code
-            dotraceln("out", "currentSpan called with no spans.");
             return NOT_TRACED;
         }
         return localSpans.peek().spanId;
@@ -146,8 +144,6 @@ public class Helper
     public String currentTrace() {
         Deque<Span> localSpans = spans.get();
         if (localSpans.isEmpty()) {
-            // fail silently
-            dotraceln("out", "currentTrace called with no spans.");
             return NOT_TRACED;
         }
         return localSpans.peek().traceId;
@@ -155,7 +151,7 @@ public class Helper
 
     public void propagateTrace(Runnable key) {
         if (key == null) {
-            // fail silently
+            // fail silently so we don't crash the actual application with our instrumentation code
             dotraceln("out", "propagateTrace called with null key.");
             return;
         }

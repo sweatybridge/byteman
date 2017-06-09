@@ -3964,11 +3964,33 @@ public class Helper
     }
 
     public static void benchmark() {
+        int count = 100_000;
+        String message = "This is longest trace string you will ever see in the logs. Please do not be longer than this. Cheers.";
+
+        // console
         long start = System.nanoTime();
-        int count = 10_000;
         for (int i = 0; i < count; i++) {
-            printTrace("This is longest trace string you will ever see in the logs. Please do not be longer than this. Cheers.");
+            dotraceln("out", message);
         }
-        dotraceln("out", String.format("latency per call: %d / %d ns", System.nanoTime() - start, count));
+        long end = System.nanoTime();
+        dotraceln("out", String.format("latency per call (file): %d / %d ns", end - start, count));
+
+        // file
+        doTraceOpen("benchmark", "/var/log/benchmark.txt");
+        start = System.nanoTime();
+        for (int i = 0; i < count; i++) {
+            dotraceln("benchmark", message);
+        }
+        end = System.nanoTime();
+        doTraceClose("benchmark");
+        dotraceln("out", String.format("latency per call (file): %d / %d ns", end - start, count));
+
+        // trace buffer
+        start = System.nanoTime();
+        for (int i = 0; i < count; i++) {
+            printTrace(message);
+        }
+        end = System.nanoTime();
+        dotraceln("out", String.format("latency per call (trace buffer): %d / %d ns", end - start, count));
     }
 }

@@ -31,10 +31,7 @@ import org.jboss.byteman.synchronization.Timer;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.*;
 import java.util.function.Supplier;
 
 /**
@@ -3963,34 +3960,71 @@ public class Helper
         dotraceln("out", String.format("nid: %d", currentNativeId()));
     }
 
-    public static void benchmark() {
-        int count = 100_000;
+    private static final class Result {
+        private double avg_x = 0;
+        private double avg_x2 = 0;
+    }
+
+    private static String time(int threads, int count, Runnable method) {
+        CompletableFuture<Result>[] rs = new CompletableFuture[threads];
+        for (int j = 0; j < threads; j++) {
+            rs[j] = CompletableFuture.supplyAsync(() -> {
+                Result result = new Result();
+                long start, duration;
+
+                for (int i = 0; i < count / threads; i++) {
+                    start = System.nanoTime();
+
+                    method.run();
+
+                    duration = System.nanoTime() - start;
+                    result.avg_x += duration / (i + 1);
+                    result.avg_x2 += duration * duration / (i + 1);
+                }
+
+                return result;
+            });
+        }
+
+        CompletableFuture.allOf(rs);
+
+        try {
+            double mean = 0;
+            double mean_x2 = 0;
+            for (int j = 0; j < threads; j++) {
+                Result r = rs[j].get();
+                mean += r.avg_x / (j + 1);
+                mean_x2 += r.avg_x2 / (j + 1);
+            }
+            double std = Math.sqrt(mean_x2 - mean * mean);
+            return String.format("%.1f %.1f", mean, std);
+        } catch (InterruptedException | ExecutionException ignored) {
+            // fail silently
+            return "";
+        }
+    }
+
+    public static void benchmark(int threads, int count) {
+        if (threads <= 0 || count <= 0) {
+            // fail silently
+            return;
+        }
         String message = "This is longest trace string you will ever see in the logs. Please do not be longer than this. Cheers.";
 
         // console
-        long start = System.nanoTime();
-        for (int i = 0; i < count; i++) {
-            dotraceln("out", message);
-        }
-        long end = System.nanoTime();
-        dotraceln("out", String.format("latency per call (file): %d / %d ns", end - start, count));
+        String console = time(threads, count, () -> dotraceln("out", message));
 
         // file
         doTraceOpen("benchmark", "/var/log/benchmark.txt");
-        start = System.nanoTime();
-        for (int i = 0; i < count; i++) {
-            dotraceln("benchmark", message);
-        }
-        end = System.nanoTime();
+        String file = time(threads, count, () -> dotraceln("benchmark", message));
         doTraceClose("benchmark");
-        dotraceln("out", String.format("latency per call (file): %d / %d ns", end - start, count));
 
         // trace buffer
-        start = System.nanoTime();
-        for (int i = 0; i < count; i++) {
-            printTrace(message);
-        }
-        end = System.nanoTime();
-        dotraceln("out", String.format("latency per call (trace buffer): %d / %d ns", end - start, count));
+        String traceBuffer = time(threads, count, () -> printTrace(message));
+
+        dotraceln("out", String.format("Result of running %d times using %d threads:", count, threads));
+        dotraceln("out", "latency per call (console): " + console);
+        dotraceln("out", "latency per call (file): " + file);
+        dotraceln("out", "latency per call (trace buffer): " + traceBuffer);
     }
 }

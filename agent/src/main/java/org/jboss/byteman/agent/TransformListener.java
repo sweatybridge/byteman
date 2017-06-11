@@ -180,7 +180,21 @@ public class TransformListener extends Thread
         // consider using polymorphism
         switch (line) {
             case "BENCHMARK":
-                Helper.benchmark();
+                String[] raw = in.readLine().trim().split("\\\\s+");
+                if (raw.length == 2) {
+                    try {
+                        int threads = Integer.parseInt(raw[0]);
+                        int count = Integer.parseInt(raw[1]);
+                        Helper.benchmark(threads, count);
+                        break;
+                    } catch (NumberFormatException ignored) {
+                        // let's not crash the agent
+                    }
+                }
+                out.println("ERROR");
+                out.println("Malformed input command: " + line);
+                out.println("OK");
+                out.flush();
                 break;
             case "BOOT":
                 loadJars(in, out, true);

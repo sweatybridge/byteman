@@ -3968,21 +3968,24 @@ public class Helper
     private static String time(int threads, int count, Runnable method) {
         CompletableFuture<Result>[] rs = new CompletableFuture[threads];
         for (int j = 0; j < threads; j++) {
-            rs[j] = CompletableFuture.supplyAsync(() -> {
-                Result result = new Result();
-                long start, duration;
+            rs[j] = CompletableFuture.supplyAsync(new Supplier<Result>() {
+                @Override
+                public Result get() {
+                    Result result = new Result();
+                    long start, duration;
 
-                for (int i = 0; i < count / threads; i++) {
-                    start = System.nanoTime();
+                    for (int i = 0; i < count / threads; i++) {
+                        start = System.nanoTime();
 
-                    method.run();
+                        method.run();
 
-                    duration = System.nanoTime() - start;
-                    result.avg_x += duration / (i + 1);
-                    result.avg_x2 += duration * duration / (i + 1);
+                        duration = System.nanoTime() - start;
+                        result.avg_x += duration / (i + 1);
+                        result.avg_x2 += duration * duration / (i + 1);
+                    }
+
+                    return result;
                 }
-
-                return result;
             });
         }
 
@@ -4012,15 +4015,30 @@ public class Helper
         String message = "This is longest trace string you will ever see in the logs. Please do not be longer than this. Cheers.";
 
         // console
-        String console = time(threads, count, () -> dotraceln("out", message));
+        String console = time(threads, count, new Runnable() {
+            @Override
+            public void run() {
+                dotraceln("out", message);
+            }
+        });
 
         // file
         doTraceOpen("benchmark", "/var/log/benchmark.txt");
-        String file = time(threads, count, () -> dotraceln("benchmark", message));
+        String file = time(threads, count, new Runnable() {
+            @Override
+            public void run() {
+                dotraceln("benchmark", message);
+            }
+        });
         doTraceClose("benchmark");
 
         // trace buffer
-        String traceBuffer = time(threads, count, () -> printTrace(message));
+        String traceBuffer = time(threads, count, new Runnable() {
+            @Override
+            public void run() {
+                printTrace(message);
+            }
+        });
 
         dotraceln("out", String.format("Result of running %d times using %d threads:", count, threads));
         dotraceln("out", "latency per call (console): " + console);

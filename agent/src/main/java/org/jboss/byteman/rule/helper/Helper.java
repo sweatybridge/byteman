@@ -3980,8 +3980,8 @@ public class Helper
                         method.run();
 
                         duration = System.nanoTime() - start;
-                        result.avg_x += duration / (i + 1);
-                        result.avg_x2 += duration * duration / (i + 1);
+                        result.avg_x += (duration - result.avg_x) / (i + 1);
+                        result.avg_x2 += (duration * duration - result.avg_x2) / (i + 1);
                     }
 
                     return result;
@@ -3996,11 +3996,11 @@ public class Helper
             double mean_x2 = 0;
             for (int j = 0; j < threads; j++) {
                 Result r = rs[j].get();
-                mean += r.avg_x / (j + 1);
-                mean_x2 += r.avg_x2 / (j + 1);
+                mean += r.avg_x / threads;
+                mean_x2 += r.avg_x2 / threads;
             }
             double std = Math.sqrt(mean_x2 - mean * mean);
-            return String.format("%.1f %.1f", mean, std);
+            return String.format("%.3f %.3f", mean, std);
         } catch (InterruptedException | ExecutionException ignored) {
             // fail silently
             return "";
@@ -4040,7 +4040,7 @@ public class Helper
             }
         });
 
-        dotraceln("out", String.format("Result of running %d times using %d threads:", count, threads));
+        dotraceln("out", String.format("Result of running %d times using %d threads (ns):", count, threads));
         dotraceln("out", "latency per call (console): " + console);
         dotraceln("out", "latency per call (file): " + file);
         dotraceln("out", "latency per call (trace buffer): " + traceBuffer);
